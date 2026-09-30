@@ -1,0 +1,8 @@
+{
+  "name": "ENCCEJA Shorts",
+  "short_name": "ENCCEJA",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#061a33",
+  "theme_color": "#071a33"
+}
