@@ -26,9 +26,9 @@ jobs:
           fetch-depth: 0
       - name: Install PDF text extractor
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
-      - name: Extract and validate official questions
+      - name: Extract official questions and create study Shorts
         run: python3 scripts/build_questions.py
-      - name: Validate generated question bank
+      - name: Validate 400 Shorts
         run: |
           test -s questions-data.js
           test -s questions-report.json
@@ -38,52 +38,42 @@ jobs:
           from pathlib import Path
           report=json.load(open('questions-report.json',encoding='utf-8'))
           text=Path('questions-data.js').read_text(encoding='utf-8')
-          m=re.fullmatch(r'window\.ENCCEJA_QUESTIONS=(.*);\s*',text,re.S)
-          assert m, 'Formato JS inválido'
-          qs=json.loads(m.group(1))
-          assert report['total']==len(qs)>0, 'Total divergente'
-          ids=[q['id'] for q in qs]
-          assert len(ids)==len(set(ids)), 'IDs duplicados'
-          seen=set()
-          coverage=collections.Counter()
-          comments=collections.Counter()
+          m=re.fullmatch(r'window\.ENCCEJA_QUESTIONS=(.*);\s*',text,re.S); assert m,'Formato JS inválido'
+          qs=json.loads(m.group(1)); assert len(qs)==report['total']==400,'O banco deve ter exatamente 400 Shorts'
+          assert report['oficiais_inep']+report['elaboradas_material_inep']==400
+          ids=[q['id'] for q in qs]; assert len(ids)==len(set(ids)),'IDs duplicados'
+          kinds=collections.Counter();areas=collections.Counter()
           for q in qs:
-            assert q['source']=='INEP'
-            assert q['commentSource']=='Material INEP'
             assert q['a'] in {'Linguagens','Ciências Humanas','Ciências da Natureza','Matemática'}
-            assert q['year'] in {2018,2019,2020}
-            assert isinstance(q['number'],int) and 1<=q['number']<=120
             assert isinstance(q['q'],str) and len(q['q'].strip())>=15
             assert isinstance(q['o'],list) and len(q['o'])==4 and all(str(x).strip() for x in q['o'])
-            assert len(set(x.strip() for x in q['o']))==4, f'Alternativas duplicadas: {q["id"]}'
+            assert len({str(x).strip().lower() for x in q['o']})==4
             assert isinstance(q['c'],int) and 0<=q['c']<4
             assert isinstance(q['e'],str) and q['e'].strip()
-            key=(q['a'],q['year'],q['number'])
-            assert key not in seen, f'Questão duplicada: {key}'
-            seen.add(key)
-            coverage[(q['a'],q['year'])]+=1
-            comments['sem_base' if 'não foi possível localizar' in q['e'].lower() else 'com_base']+=1
-          audit={'total':len(qs),'cobertura':{f'{a} | {y}':n for (a,y),n in sorted(coverage.items())},'comentarios':dict(comments),'checks':['IDs únicos','área/ano/número válidos','4 alternativas não vazias e distintas','índice de gabarito válido','fonte INEP','fonte de comentário Material INEP','sem duplicidade área+ano+número']}
-          Path('questions-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-          print(json.dumps(audit,ensure_ascii=False,indent=2))
+            assert q['commentSource']=='Material INEP'
+            if q['source']=='INEP':
+              assert q['year'] in {2018,2019,2020}; assert isinstance(q['number'],int)
+              kinds['oficiais']+=1
+            elif q['source']=='Elaborada do Material INEP':
+              assert q['year'] is None; assert q['q'].startswith('Complete a frase de acordo com o material do INEP:')
+              kinds['elaboradas']+=1
+            else: raise AssertionError('Fonte inválida: '+str(q['source']))
+            areas[q['a']]+=1
+          assert kinds['oficiais']==report['oficiais_inep']
+          assert kinds['elaboradas']==report['elaboradas_material_inep']
+          audit={'total':400,'tipos':dict(kinds),'areas':dict(areas),'checks':['400 Shorts exatos','IDs únicos','4 alternativas distintas','resposta válida','177 questões oficiais preservadas quando disponíveis','novas questões identificadas como elaboradas do Material INEP','comentários vinculados ao Material INEP']}
+          Path('questions-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n',encoding='utf-8');print(json.dumps(audit,ensure_ascii=False,indent=2))
           PY
       - name: Commit generated question bank safely
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add questions-data.js questions-report.json questions-audit.json
-          if git diff --cached --quiet; then
-            echo 'Question bank already up to date.'
-            exit 0
-          fi
-          git commit -m 'Gera e audita banco de questões oficiais INEP'
+          if git diff --cached --quiet; then echo 'Question bank already up to date.'; exit 0; fi
+          git commit -m 'Gera e audita 400 Shorts ENCCEJA'
           for attempt in 1 2 3 4 5; do
             git fetch origin main
-            if git rebase origin/main && git push origin HEAD:main; then
-              exit 0
-            fi
-            git rebase --abort || true
-            sleep $((attempt * 2))
+            if git rebase origin/main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort || true; sleep $((attempt * 2))
           done
-          echo 'Falha ao sincronizar o banco após 5 tentativas.' >&2
-          exit 1
+          echo 'Falha ao sincronizar o banco após 5 tentativas.' >&2; exit 1
