@@ -1,0 +1,40 @@
+name: Build ENCCEJA Questions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_questions.py'
+      - '1 - Ciências Humanas e suas Tecnologias.zip'
+      - '2 - Ciências da Natureza e suas Tecnologias.zip'
+      - '3 - Linguagens, Códigos e suas Tecnologias.zip'
+      - 'Matematica_ENCCEJA_PROVAS.zip'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PDF text extractor
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - name: Extract and validate official questions
+        run: python3 scripts/build_questions.py
+      - name: Validate generated JavaScript
+        run: |
+          test -s questions-data.js
+          test -s questions-report.json
+          node --check questions-data.js
+          python3 - <<'PY'
+          import json
+          x=json.load(open('questions-report.json'))
+          assert x['total'] > 0
+          print('Validated:',x['total'])
+          PY
+      - name: Commit generated question bank
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add questions-data.js questions-report.json
+          git diff --cached --quiet || git commit -m 'Gera banco de questões oficiais a partir das provas INEP'
+          git push
