@@ -1,0 +1,27 @@
+{
+  "total": 177,
+  "cobertura": {
+    "Ciências Humanas | 2019": 15,
+    "Ciências Humanas | 2020": 15,
+    "Ciências da Natureza | 2018": 26,
+    "Ciências da Natureza | 2019": 15,
+    "Ciências da Natureza | 2020": 13,
+    "Linguagens | 2018": 29,
+    "Linguagens | 2019": 16,
+    "Linguagens | 2020": 18,
+    "Matemática | 2019": 13,
+    "Matemática | 2020": 17
+  },
+  "comentarios": {
+    "com_base": 177
+  },
+  "checks": [
+    "IDs únicos",
+    "área/ano/número válidos",
+    "4 alternativas não vazias e distintas",
+    "índice de gabarito válido",
+    "fonte INEP",
+    "fonte de comentário Material INEP",
+    "sem duplicidade área+ano+número"
+  ]
+}

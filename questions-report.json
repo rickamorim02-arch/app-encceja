@@ -1,0 +1,89 @@
+{
+  "total": 177,
+  "por_arquivo": [
+    {
+      "area": "Linguagens",
+      "year": 2018,
+      "gabaritos": 30,
+      "questoes_integradas": 58,
+      "trechos_material": 194
+    },
+    {
+      "area": "Linguagens",
+      "year": 2019,
+      "gabaritos": 30,
+      "questoes_integradas": 16,
+      "trechos_material": 194
+    },
+    {
+      "area": "Linguagens",
+      "year": 2020,
+      "gabaritos": 30,
+      "questoes_integradas": 18,
+      "trechos_material": 194
+    },
+    {
+      "area": "Ciências Humanas",
+      "year": 2018,
+      "gabaritos": 0,
+      "questoes_integradas": 0,
+      "trechos_material": 272
+    },
+    {
+      "area": "Ciências Humanas",
+      "year": 2019,
+      "gabaritos": 30,
+      "questoes_integradas": 15,
+      "trechos_material": 272
+    },
+    {
+      "area": "Ciências Humanas",
+      "year": 2020,
+      "gabaritos": 30,
+      "questoes_integradas": 15,
+      "trechos_material": 272
+    },
+    {
+      "area": "Ciências da Natureza",
+      "year": 2018,
+      "gabaritos": 30,
+      "questoes_integradas": 26,
+      "trechos_material": 732
+    },
+    {
+      "area": "Ciências da Natureza",
+      "year": 2019,
+      "gabaritos": 30,
+      "questoes_integradas": 15,
+      "trechos_material": 732
+    },
+    {
+      "area": "Ciências da Natureza",
+      "year": 2020,
+      "gabaritos": 30,
+      "questoes_integradas": 13,
+      "trechos_material": 732
+    },
+    {
+      "area": "Matemática",
+      "year": 2018,
+      "gabaritos": 0,
+      "questoes_integradas": 0,
+      "trechos_material": 494
+    },
+    {
+      "area": "Matemática",
+      "year": 2019,
+      "gabaritos": 30,
+      "questoes_integradas": 13,
+      "trechos_material": 494
+    },
+    {
+      "area": "Matemática",
+      "year": 2020,
+      "gabaritos": 30,
+      "questoes_integradas": 17,
+      "trechos_material": 494
+    }
+  ]
+}
