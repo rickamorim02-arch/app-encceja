@@ -1,0 +1,36 @@
+name: Build ENCCEJA Reading
+on:
+  push:
+    paths:
+      - 'scripts/build_reading.py'
+      - '*.zip'
+      - 'Aula 00.PDF'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PDF text extractor
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - name: Build reading data
+        run: python3 scripts/build_reading.py
+      - name: Validate generated files
+        run: |
+          test -s reading-data-1.js
+          test -s reading-data-2.js
+          test -s reading-data-3.js
+          test -s reading-data-4.js
+          node --check reading-data-1.js
+          node --check reading-data-2.js
+          node --check reading-data-3.js
+          node --check reading-data-4.js
+      - name: Commit generated reading data
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reading-data-1.js reading-data-2.js reading-data-3.js reading-data-4.js
+          git diff --cached --quiet || git commit -m 'Gera 40 aulas da aba Leitura a partir dos resumos'
+          git push
