@@ -1,36 +1,51 @@
 name: Build ENCCEJA Reading
 on:
   push:
+    branches: [main]
     paths:
+      - '.github/workflows/build-reading.yml'
       - 'scripts/build_reading.py'
       - '*.zip'
       - 'Aula 00.PDF'
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: encceja-reading-main
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install PDF text extractor
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - name: Build reading data
         run: python3 scripts/build_reading.py
-      - name: Validate generated files
+      - name: Validate 40 lessons
         run: |
-          test -s reading-data-1.js
-          test -s reading-data-2.js
-          test -s reading-data-3.js
-          test -s reading-data-4.js
-          node --check reading-data-1.js
-          node --check reading-data-2.js
-          node --check reading-data-3.js
-          node --check reading-data-4.js
-      - name: Commit generated reading data
+          for f in reading-data-1.js reading-data-2.js reading-data-3.js reading-data-4.js; do test -s "$f"; node --check "$f"; done
+          python3 - <<'PY'
+          import re,json
+          total=0
+          for i in range(1,5):
+            s=open(f'reading-data-{i}.js',encoding='utf-8').read()
+            a=json.loads(re.search(r'=(.*);\s*$',s,re.S).group(1))
+            assert len(a['aulas'])==10
+            assert all(x['html'].strip() for x in a['aulas'])
+            total+=len(a['aulas'])
+          assert total==40
+          print('OK: 40 aulas com texto')
+          PY
+      - name: Commit generated reading data safely
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add reading-data-1.js reading-data-2.js reading-data-3.js reading-data-4.js
-          git diff --cached --quiet || git commit -m 'Gera 40 aulas da aba Leitura a partir dos resumos'
-          git push
+          git diff --cached --quiet && exit 0
+          git commit -m 'Gera 40 aulas da aba Leitura a partir dos resumos'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
