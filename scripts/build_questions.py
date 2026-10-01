@@ -36,7 +36,6 @@ def clean_answer(s):
 def best_sentence(q,ps):
  qw=words(q);best='';score=0
  for p in ps:
-  # prefere uma frase curta e diretamente relacionada, em vez de despejar um parágrafo inteiro
   for s in re.split(r'(?<=[.!?])\s+',p):
    s=re.sub(r'\s+',' ',s).strip()
    if not 45<=len(s)<=260:continue
@@ -44,13 +43,12 @@ def best_sentence(q,ps):
    if sc>score:score=sc;best=s
  return best,score
 def simplify(s):
- # trocas conservadoras de linguagem: não mudam a ideia do texto-fonte
  reps=[('a fim de','para'),('com o objetivo de','para'),('em decorrência de','por causa de'),('por meio de','usando'),('efetuar','fazer'),('realizar','fazer'),('utilizar','usar'),('possibilita','permite'),('possibilitam','permitem'),('necessita','precisa'),('necessitam','precisam')]
  for a,b in reps:s=re.sub(r'\b'+re.escape(a)+r'\b',b,s,flags=re.I)
  return re.sub(r'\s+',' ',s).strip()
 def comment(q,answer,letter,ps):
  ans=clean_answer(answer)
- base=f'Resposta certa: {letter}. Em palavras simples: a ideia principal é {ans}.'
+ base=f'Resposta certa: {letter}. A ideia principal é {ans}.'
  sent,score=best_sentence(q+' '+answer,ps)
  if score<2:return base+' O gabarito é oficial do INEP. O material fornecido não trouxe um trecho curto e claro o bastante para explicar mais sem inventar.'
  sent=simplify(sent)
