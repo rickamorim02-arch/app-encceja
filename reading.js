@@ -7,5 +7,5 @@ const e=document.createElement('button');e.id='nessay';e.innerHTML='✍️<br>Re
 nav.querySelectorAll('button:not(#nreading):not(#nessay)').forEach(x=>x.addEventListener('click',()=>sec.classList.add('hidden')));return true}
 let n=0,t=setInterval(()=>{n++;if(init()||n>120)clearInterval(t)},50);
 function loadScript(src,next){const s=document.createElement('script');s.src=src;s.onload=next||null;document.body.appendChild(s)}
-loadScript('essay-data.js?v=3',()=>loadScript('essay.js?v=3'));
+loadScript('essay-data.js?v=4',()=>loadScript('essay.js?v=4'));
 })();
