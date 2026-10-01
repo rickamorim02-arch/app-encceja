@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/build-questions.yml'
       - 'scripts/build_questions.py'
       - '1 - Ciências Humanas e suas Tecnologias.zip'
       - '2 - Ciências da Natureza e suas Tecnologias.zip'
@@ -33,7 +34,7 @@ jobs:
           test -s questions-report.json
           node --check questions-data.js
           python3 - <<'PY'
-          import json,re
+          import json,re,collections
           from pathlib import Path
           report=json.load(open('questions-report.json',encoding='utf-8'))
           text=Path('questions-data.js').read_text(encoding='utf-8')
@@ -43,6 +44,9 @@ jobs:
           assert report['total']==len(qs)>0, 'Total divergente'
           ids=[q['id'] for q in qs]
           assert len(ids)==len(set(ids)), 'IDs duplicados'
+          seen=set()
+          coverage=collections.Counter()
+          comments=collections.Counter()
           for q in qs:
             assert q['source']=='INEP'
             assert q['commentSource']=='Material INEP'
@@ -51,20 +55,28 @@ jobs:
             assert isinstance(q['number'],int) and 1<=q['number']<=120
             assert isinstance(q['q'],str) and len(q['q'].strip())>=15
             assert isinstance(q['o'],list) and len(q['o'])==4 and all(str(x).strip() for x in q['o'])
+            assert len(set(x.strip() for x in q['o']))==4, f'Alternativas duplicadas: {q["id"]}'
             assert isinstance(q['c'],int) and 0<=q['c']<4
             assert isinstance(q['e'],str) and q['e'].strip()
-          print('Validated:',len(qs),'unique official questions')
+            key=(q['a'],q['year'],q['number'])
+            assert key not in seen, f'Questão duplicada: {key}'
+            seen.add(key)
+            coverage[(q['a'],q['year'])]+=1
+            comments['sem_base' if 'não foi possível localizar' in q['e'].lower() else 'com_base']+=1
+          audit={'total':len(qs),'cobertura':{f'{a} | {y}':n for (a,y),n in sorted(coverage.items())},'comentarios':dict(comments),'checks':['IDs únicos','área/ano/número válidos','4 alternativas não vazias e distintas','índice de gabarito válido','fonte INEP','fonte de comentário Material INEP','sem duplicidade área+ano+número']}
+          Path('questions-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(audit,ensure_ascii=False,indent=2))
           PY
       - name: Commit generated question bank safely
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add questions-data.js questions-report.json
+          git add questions-data.js questions-report.json questions-audit.json
           if git diff --cached --quiet; then
             echo 'Question bank already up to date.'
             exit 0
           fi
-          git commit -m 'Gera banco de questões oficiais a partir das provas INEP'
+          git commit -m 'Gera e audita banco de questões oficiais INEP'
           for attempt in 1 2 3 4 5; do
             git fetch origin main
             if git rebase origin/main && git push origin HEAD:main; then
