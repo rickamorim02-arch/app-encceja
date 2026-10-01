@@ -1,1 +1,0 @@
-window.ENCCEJA_READING_PART_1={"nome":"Linguagens, Códigos e suas Tecnologias","aulas":[{"n":"Aula 00","t":"Elabore um resumo estruturado completo.","html":"<p>Conteúdo integral extraído do resumo enviado pelo usuário.</p>"}]};
