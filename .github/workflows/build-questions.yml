@@ -8,33 +8,70 @@ on:
       - '2 - Ciências da Natureza e suas Tecnologias.zip'
       - '3 - Linguagens, Códigos e suas Tecnologias.zip'
       - 'Matematica_ENCCEJA_PROVAS.zip'
+      - 'Matematica_ENCCEJA_INEP_A.zip'
+      - 'Matematica_ENCCEJA_INEP_B.zip'
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: encceja-question-bank-main
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install PDF text extractor
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - name: Extract and validate official questions
         run: python3 scripts/build_questions.py
-      - name: Validate generated JavaScript
+      - name: Validate generated question bank
         run: |
           test -s questions-data.js
           test -s questions-report.json
           node --check questions-data.js
           python3 - <<'PY'
-          import json
-          x=json.load(open('questions-report.json'))
-          assert x['total'] > 0
-          print('Validated:',x['total'])
+          import json,re
+          from pathlib import Path
+          report=json.load(open('questions-report.json',encoding='utf-8'))
+          text=Path('questions-data.js').read_text(encoding='utf-8')
+          m=re.fullmatch(r'window\.ENCCEJA_QUESTIONS=(.*);\s*',text,re.S)
+          assert m, 'Formato JS inválido'
+          qs=json.loads(m.group(1))
+          assert report['total']==len(qs)>0, 'Total divergente'
+          ids=[q['id'] for q in qs]
+          assert len(ids)==len(set(ids)), 'IDs duplicados'
+          for q in qs:
+            assert q['source']=='INEP'
+            assert q['commentSource']=='Material INEP'
+            assert q['a'] in {'Linguagens','Ciências Humanas','Ciências da Natureza','Matemática'}
+            assert q['year'] in {2018,2019,2020}
+            assert isinstance(q['number'],int) and 1<=q['number']<=120
+            assert isinstance(q['q'],str) and len(q['q'].strip())>=15
+            assert isinstance(q['o'],list) and len(q['o'])==4 and all(str(x).strip() for x in q['o'])
+            assert isinstance(q['c'],int) and 0<=q['c']<4
+            assert isinstance(q['e'],str) and q['e'].strip()
+          print('Validated:',len(qs),'unique official questions')
           PY
-      - name: Commit generated question bank
+      - name: Commit generated question bank safely
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add questions-data.js questions-report.json
-          git diff --cached --quiet || git commit -m 'Gera banco de questões oficiais a partir das provas INEP'
-          git push
+          if git diff --cached --quiet; then
+            echo 'Question bank already up to date.'
+            exit 0
+          fi
+          git commit -m 'Gera banco de questões oficiais a partir das provas INEP'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase origin/main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep $((attempt * 2))
+          done
+          echo 'Falha ao sincronizar o banco após 5 tentativas.' >&2
+          exit 1
