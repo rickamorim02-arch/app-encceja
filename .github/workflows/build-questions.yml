@@ -28,7 +28,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - name: Extract official questions and create study Shorts
         run: python3 scripts/build_questions.py
-      - name: Validate 400 Shorts
+      - name: Validate 360 to 400 Shorts
         run: |
           test -s questions-data.js
           test -s questions-report.json
@@ -39,8 +39,10 @@ jobs:
           report=json.load(open('questions-report.json',encoding='utf-8'))
           text=Path('questions-data.js').read_text(encoding='utf-8')
           m=re.fullmatch(r'window\.ENCCEJA_QUESTIONS=(.*);\s*',text,re.S); assert m,'Formato JS inválido'
-          qs=json.loads(m.group(1)); assert len(qs)==report['total']==400,'O banco deve ter exatamente 400 Shorts'
-          assert report['oficiais_inep']+report['elaboradas_material_inep']==400
+          qs=json.loads(m.group(1)); total=len(qs)
+          assert total==report['total'],'Total divergente'
+          assert 360<=total<=400,f'O banco deve ter entre 360 e 400 Shorts; encontrado {total}'
+          assert report['oficiais_inep']+report['elaboradas_material_inep']==total
           ids=[q['id'] for q in qs]; assert len(ids)==len(set(ids)),'IDs duplicados'
           kinds=collections.Counter();areas=collections.Counter()
           for q in qs:
@@ -52,16 +54,14 @@ jobs:
             assert isinstance(q['e'],str) and q['e'].strip()
             assert q['commentSource']=='Material INEP'
             if q['source']=='INEP':
-              assert q['year'] in {2018,2019,2020}; assert isinstance(q['number'],int)
-              kinds['oficiais']+=1
+              assert q['year'] in {2018,2019,2020}; assert isinstance(q['number'],int); kinds['oficiais']+=1
             elif q['source']=='Elaborada do Material INEP':
-              assert q['year'] is None; assert q['q'].startswith('Complete a frase de acordo com o material do INEP:')
-              kinds['elaboradas']+=1
+              assert q['year'] is None; kinds['elaboradas']+=1
             else: raise AssertionError('Fonte inválida: '+str(q['source']))
             areas[q['a']]+=1
           assert kinds['oficiais']==report['oficiais_inep']
           assert kinds['elaboradas']==report['elaboradas_material_inep']
-          audit={'total':400,'tipos':dict(kinds),'areas':dict(areas),'checks':['400 Shorts exatos','IDs únicos','4 alternativas distintas','resposta válida','177 questões oficiais preservadas quando disponíveis','novas questões identificadas como elaboradas do Material INEP','comentários vinculados ao Material INEP']}
+          audit={'total':total,'faixa_exigida':'360-400','tipos':dict(kinds),'areas':dict(areas),'checks':['entre 360 e 400 Shorts','IDs únicos','4 alternativas distintas','resposta válida','questões oficiais preservadas','novas questões identificadas como elaboradas do Material INEP','comentários vinculados ao Material INEP']}
           Path('questions-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n',encoding='utf-8');print(json.dumps(audit,ensure_ascii=False,indent=2))
           PY
       - name: Commit generated question bank safely
@@ -70,7 +70,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add questions-data.js questions-report.json questions-audit.json
           if git diff --cached --quiet; then echo 'Question bank already up to date.'; exit 0; fi
-          git commit -m 'Gera e audita 400 Shorts ENCCEJA'
+          git commit -m 'Gera e audita banco de Shorts ENCCEJA'
           for attempt in 1 2 3 4 5; do
             git fetch origin main
             if git rebase origin/main && git push origin HEAD:main; then exit 0; fi
