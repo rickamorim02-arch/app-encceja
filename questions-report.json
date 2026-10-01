@@ -1,5 +1,7 @@
 {
-  "total": 177,
+  "total": 400,
+  "oficiais_inep": 177,
+  "elaboradas_material_inep": 223,
   "por_arquivo": [
     {
       "area": "Linguagens",
