@@ -6,7 +6,10 @@ SOURCES=[('Linguagens, Códigos e suas Tecnologias','3 - Linguagens, Códigos e 
 def pdf_text(p):
  out=p.with_suffix('.txt'); subprocess.run(['pdftotext','-layout',str(p),str(out)],check=True); return out.read_text('utf-8',errors='replace')
 def clean(t):
- t=t.replace('\x0c','\n'); lines=[re.sub(r'\s+$','',x) for x in t.splitlines()]
+ t=t.replace('\x0c','\n')
+ # Remover somente esta frase solicitada, preservando todo o restante do documento.
+ t=re.sub(r'(?im)^\s*Elabore um resumo estruturado completo\.\s*$', '', t)
+ lines=[re.sub(r'\s+$','',x) for x in t.splitlines()]
  while lines and not lines[0].strip(): lines.pop(0)
  return '\n'.join(lines).strip()
 def to_html(t):
