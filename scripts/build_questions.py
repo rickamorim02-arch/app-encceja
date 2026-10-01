@@ -30,14 +30,32 @@ def questions(t):
   if len(en)>=15:out.append((n,en,[by[x] for x in 'ABCD']))
  return out
 def paras(t):return [re.sub(r'\s+',' ',p).strip() for p in re.split(r'\n\s*\n+',t) if 100<=len(re.sub(r'\s+',' ',p).strip())<=1000]
-def comment(q,ps):
+def clean_answer(s):
+ s=re.sub(r'\s+',' ',s).strip().rstrip('.;')
+ return s[:1].lower()+s[1:] if s else s
+def best_sentence(q,ps):
  qw=words(q);best='';score=0
  for p in ps:
-  s=len(qw&words(p))
-  if s>score:score=s;best=p
- if score<2:return 'Gabarito oficial confirmado. Não foi localizado no Material INEP fornecido um trecho com correspondência suficiente para comentário automático sem extrapolação.'
- if len(best)>520:best=best[:517].rsplit(' ',1)[0]+'...'
- return 'Comentário baseado no Material INEP: '+best
+  # prefere uma frase curta e diretamente relacionada, em vez de despejar um parágrafo inteiro
+  for s in re.split(r'(?<=[.!?])\s+',p):
+   s=re.sub(r'\s+',' ',s).strip()
+   if not 45<=len(s)<=260:continue
+   sc=len(qw&words(s))
+   if sc>score:score=sc;best=s
+ return best,score
+def simplify(s):
+ # trocas conservadoras de linguagem: não mudam a ideia do texto-fonte
+ reps=[('a fim de','para'),('com o objetivo de','para'),('em decorrência de','por causa de'),('por meio de','usando'),('efetuar','fazer'),('realizar','fazer'),('utilizar','usar'),('possibilita','permite'),('possibilitam','permitem'),('necessita','precisa'),('necessitam','precisam')]
+ for a,b in reps:s=re.sub(r'\b'+re.escape(a)+r'\b',b,s,flags=re.I)
+ return re.sub(r'\s+',' ',s).strip()
+def comment(q,answer,letter,ps):
+ ans=clean_answer(answer)
+ base=f'Resposta certa: {letter}. Em palavras simples: a ideia principal é {ans}.'
+ sent,score=best_sentence(q+' '+answer,ps)
+ if score<2:return base+' O gabarito é oficial do INEP. O material fornecido não trouxe um trecho curto e claro o bastante para explicar mais sem inventar.'
+ sent=simplify(sent)
+ if len(sent)>220:sent=sent[:217].rsplit(' ',1)[0]+'...'
+ return base+' O material do INEP reforça isso: '+sent
 allq=[];report=[]
 with tempfile.TemporaryDirectory() as d:
  td=Path(d);corpus={}
@@ -62,7 +80,7 @@ with tempfile.TemporaryDirectory() as d:
     for n in [x for x in yn if not is_gab(x)]:
      for num,en,opts in questions(pdftext(z.read(n),td/f'p-{abs(hash((area,y,n)))}.pdf')):
       if num not in gab:continue
-      c='ABCD'.index(gab[num]);allq.append({'id':f'inep-{y}-{norm(area).replace(" ","")[:6]}-{num}','a':area,'t':f'ENCCEJA {y} • Questão {num}','q':en,'o':opts,'c':c,'e':comment(en+' '+opts[c],corpus[area]),'source':'INEP','commentSource':'Material INEP','year':y,'number':num});count+=1
+      letter=gab[num];c='ABCD'.index(letter);allq.append({'id':f'inep-{y}-{norm(area).replace(" ","")[:6]}-{num}','a':area,'t':f'ENCCEJA {y} • Questão {num}','q':en,'o':opts,'c':c,'e':comment(en,opts[c],letter,corpus[area]),'source':'INEP','commentSource':'Material INEP','year':y,'number':num});count+=1
     report.append({'area':area,'year':y,'gabaritos':len(gab),'questoes_integradas':count,'trechos_material':len(corpus[area])})
 allq=sorted({q['id']:q for q in allq}.values(),key=lambda q:(q['year'],q['a'],q['number']))
 (ROOT/'questions-data.js').write_text('window.ENCCEJA_QUESTIONS='+json.dumps(allq,ensure_ascii=False,separators=(',',':'))+';\n','utf-8');(ROOT/'questions-report.json').write_text(json.dumps({'total':len(allq),'por_arquivo':report},ensure_ascii=False,indent=2)+'\n','utf-8')
