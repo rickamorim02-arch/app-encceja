@@ -1,8 +1,14 @@
 {
   "name": "ENCCEJA Shorts",
   "short_name": "ENCCEJA",
-  "start_url": "./",
+  "description": "Aplicativo de estudos para o ENCCEJA Ensino Médio com questões, leitura e treino de redação.",
+  "id": "/app-encceja/",
+  "start_url": "/app-encceja/",
+  "scope": "/app-encceja/",
   "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
   "background_color": "#061a33",
-  "theme_color": "#071a33"
+  "theme_color": "#071a33",
+  "categories": ["education"]
 }
